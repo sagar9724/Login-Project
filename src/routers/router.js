@@ -1,8 +1,8 @@
 const express = require('express')
 const router = new express.Router();
 const User = require("../models/login")
-
 const bcrypt = require("bcryptjs");
+
 
 
 router.get("/", (req, res) => {
@@ -32,24 +32,24 @@ router.post("/login", async (req, res) => {
         const email = req.body.email;
         const password = req.body.password;
         
-        const result = await User.findOne({ name, email },{cpassword:1,_id:0});
+        const result = await User.findOne({ name, email });
 
         // console.log(result.cpassword);
         const cpassword = result.cpassword;
-        const hashPassword = await bcrypt.compare(password,cpassword);
+        const isMatch = await bcrypt.compare(password,cpassword);
          
 
-        if (!hashPassword) {
+        if (!isMatch) {
 
             res.send("Wrong Username or Password");
         }
         else {
             const user = name;
-
+            const token = await result.generateAuthToken();
             res.render("index", { user });
         }
     } catch (err) {
-        res.send(err);
+        res.status(400).send(err);
     }
 
 })
@@ -63,17 +63,17 @@ router.post("/signup", async (req, res) => {
     try {
         const password = req.body.password;
         const cpassword = req.body.cpassword;
-        const hashPassword = await bcrypt.hash(password,10);
-        const hashCPassword = await bcrypt.hash(cpassword,10);
 
         if (password === cpassword) {
 
             const data = new User({
                 name: req.body.name,
                 email: req.body.email,
-                password: hashPassword,
-                cpassword: hashCPassword
+                password: password,
+                cpassword:cpassword
             });
+
+            const token = await data.generateAuthToken();
 
             const result = await data.save();
             const user = req.body.name;
